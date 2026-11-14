@@ -22,18 +22,17 @@ Settings that change per environment live in **`.env`** (git-ignored). Start fro
 cp .env.example .env
 ```
 
-| Variable                   | Required | What it does                                                        |
+| Variable                   | Default  | What it does                                                        |
 | -------------------------- | -------- | ------------------------------------------------------------------- |
-| `PUBLIC_SITE_URL`          | yes      | Live domain, used for canonical and social-share URLs               |
-| `PUBLIC_LAUNCH_DATE`       | yes      | Countdown target, ISO 8601 with timezone, e.g. `2027-03-01T18:00:00Z` |
+| `PUBLIC_SITE_URL`          | `https://bipgram.com` | Live domain, used for canonical and social-share URLs |
+| `PUBLIC_LAUNCH_DATE`       | `2027-03-01T18:00:00Z` | Countdown target, ISO 8601 with timezone |
 | `PUBLIC_BUILD_PROGRESS`    |          | % on the progress bar, 0–100 (default 78)                          |
 | `PUBLIC_CONTACT_EMAIL`     |          | Footer email                                                        |
-| `PUBLIC_WAITLIST_ENDPOINT` |          | URL accepting `POST { email }` as JSON (Formspree, Getform, your API). **Empty = demo mode: sign-ups stay in the visitor's browser only.** |
 | `PUBLIC_INSTAGRAM_URL`, `PUBLIC_X_URL`, `PUBLIC_TIKTOK_URL` | | Social icons in the header, hidden when empty |
-| `PUBLIC_POWERED_BY_NAME`, `PUBLIC_POWERED_BY_URL` | | Footer credit (default: All Things Web Technology) |
+| `PUBLIC_POWERED_BY_NAME`, `PUBLIC_POWERED_BY_URL` | | Footer credit (default: All Things Web Technology Inc) |
 
 The schema lives in `astro.config.mjs` (`env.schema`) and is read through `astro:env` in `src/config.ts`.
-Values are validated every time `npm run dev` or `npm run build` starts. A missing required variable, a bad URL or a
+Values are validated every time `npm run dev` or `npm run build` starts. A bad URL or a
 date without a timezone stops the build with a message naming the variable.
 
 All of these are public: they end up in the page's HTML. Don't put secrets in `.env`.

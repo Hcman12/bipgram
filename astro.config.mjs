@@ -7,10 +7,15 @@ import { loadEnv } from 'vite';
 const mode = process.argv.includes('dev') ? 'development' : 'production';
 const { PUBLIC_SITE_URL } = loadEnv(mode, process.cwd(), '');
 
+// Built-in defaults so a fresh deploy (e.g. Vercel with no env vars set) still builds.
+// Override either one in .env or in the host's "Environment Variables" settings.
+const DEFAULT_SITE_URL = 'https://bipgram.com';
+const DEFAULT_LAUNCH_DATE = '2027-03-01T18:00:00Z';
+
 // https://astro.build/config
 export default defineConfig({
-  // Canonical + social-share URLs. Set PUBLIC_SITE_URL in .env.
-  site: PUBLIC_SITE_URL || undefined,
+  // Canonical + social-share URLs. Set PUBLIC_SITE_URL in .env / host settings.
+  site: PUBLIC_SITE_URL || DEFAULT_SITE_URL,
   compressHTML: true,
   build: {
     inlineStylesheets: 'auto',
@@ -24,9 +29,9 @@ export default defineConfig({
    */
   env: {
     schema: {
-      // ── Required ─────────────────────────────────────────────
-      PUBLIC_SITE_URL: envField.string({ context: 'client', access: 'public', url: true }),
-      PUBLIC_LAUNCH_DATE: envField.string({ context: 'client', access: 'public', min: 10 }),
+      // ── Core (defaults above; override per environment) ──────
+      PUBLIC_SITE_URL: envField.string({ context: 'client', access: 'public', url: true, default: DEFAULT_SITE_URL }),
+      PUBLIC_LAUNCH_DATE: envField.string({ context: 'client', access: 'public', min: 10, default: DEFAULT_LAUNCH_DATE }),
 
       // ── Page content ─────────────────────────────────────────
       PUBLIC_BUILD_PROGRESS: envField.number({
