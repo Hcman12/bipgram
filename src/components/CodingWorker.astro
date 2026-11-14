@@ -1,0 +1,609 @@
+---
+/**
+ * A little construction worker who lives on top of the countdown cards.
+ *
+ * Routine (loops forever):
+ *   code on the laptop → sip coffee → code → put the laptop down, stand up,
+ *   walk to the far end of the clock, stretch, walk back → pick the laptop up → code…
+ *
+ * Tap / click / Enter on him: he shakes, the laptop tumbles off the card,
+ * he walks back to his spot, picks it up and carries on coding.
+ *
+ * Drawing: one inline SVG (profile, facing right, 64×80 units, feet on y=80).
+ * Poses are CSS transforms on the limbs, chosen by `data-pose` / `data-seated`.
+ * The choreography is a cancellable async sequence (AbortController).
+ * Sizing: the stage's font-size is one drawing unit, so everything scales with the cards.
+ */
+---
+
+<div class="crew" data-crew aria-hidden="false">
+  <span class="mug" data-mug aria-hidden="true">
+    <svg viewBox="0 0 12 12">
+      <path class="steam s1" d="M3.2 1.6c-.8-.7.8-1.2 0-1.9" />
+      <path class="steam s2" d="M5.6 1.6c-.8-.7.8-1.2 0-1.9" />
+      <rect x="1" y="3" width="7" height="9" rx="1.4" fill="#f4f1ff" />
+      <rect x="1" y="6.2" width="7" height="1.6" fill="#ff6b57" />
+      <path d="M8 5h1.1a1.8 1.8 0 0 1 0 3.6H8" fill="none" stroke="#f4f1ff" stroke-width="1.3" />
+    </svg>
+  </span>
+
+  <span class="laptop" data-laptop aria-hidden="true">
+    <svg viewBox="0 0 24 18">
+      <g transform="rotate(12 19 16)">
+        <rect x="18" y="1" width="2.6" height="15.5" rx="1" fill="#2b2f3a" />
+        <rect class="screen" x="17.2" y="2" width="1" height="13" rx=".5" fill="#9ad1ff" />
+      </g>
+      <rect x="0" y="14.4" width="20.5" height="3" rx="1" fill="#c3c8d4" />
+      <rect x="1" y="17" width="18.5" height="1" rx=".5" fill="#8d93a3" />
+    </svg>
+  </span>
+
+  <button class="worker" type="button" data-worker data-pose="type" data-seated="1" aria-label="Construction worker coding on a laptop. Tap to shake him." title="Tap me">
+    <span class="bubble" data-bubble aria-hidden="true"></span>
+    <svg class="figure" viewBox="0 0 64 80" aria-hidden="true">
+      <g class="body">
+        <!-- legs: standing -->
+        <g class="legs-stand">
+          <g class="leg leg-b">
+            <rect x="29" y="54" width="6" height="23" rx="3" fill="#243457" />
+            <rect x="28.5" y="75" width="10" height="5" rx="2" fill="#3b2a20" />
+          </g>
+          <g class="leg leg-f">
+            <rect x="29" y="54" width="6" height="23" rx="3" fill="#2f4371" />
+            <rect x="28.5" y="75" width="10" height="5" rx="2" fill="#4a3426" />
+          </g>
+        </g>
+        <!-- legs: sitting cross-legged -->
+        <g class="legs-sit">
+          <rect x="25" y="71" width="23" height="7.5" rx="3.75" fill="#243457" />
+          <rect x="29" y="74" width="20" height="6" rx="3" fill="#2f4371" />
+          <rect x="45.5" y="72.5" width="7" height="7.5" rx="2" fill="#4a3426" />
+        </g>
+
+        <g class="upper">
+          <!-- back arm -->
+          <g class="arm arm-b">
+            <rect x="29.8" y="33" width="4.4" height="12.5" rx="2.2" fill="#2d3850" />
+            <g class="fore">
+              <rect x="30" y="44" width="4" height="11" rx="2" fill="#2d3850" />
+              <circle cx="32" cy="55.6" r="2.4" fill="#d29a76" />
+            </g>
+          </g>
+          <!-- torso -->
+          <rect x="24" y="31" width="17" height="26" rx="7" fill="#39465f" />
+          <rect x="24" y="33" width="17" height="22" rx="6" fill="#ff7a1a" />
+          <rect x="24" y="45" width="17" height="3" fill="#ededed" />
+          <rect x="24" y="53" width="17" height="3" rx="1" fill="#2a2a33" />
+          <rect x="30.5" y="27" width="5" height="5" fill="#e0a983" />
+          <!-- head -->
+          <g class="head">
+            <circle cx="33" cy="21" r="7.5" fill="#e8b48f" />
+            <circle cx="30.4" cy="22.2" r="1.6" fill="#d79c76" />
+            <ellipse class="eye" cx="37.6" cy="20.4" rx=".9" ry="1.1" fill="#1b1b22" />
+            <path d="M40.1 20.6l1.8 2-1.8.4z" fill="#e0a983" />
+            <path class="mouth" d="M37.2 25q1.4.8 2.6 0" fill="none" stroke="#8a4b3a" stroke-width=".7" stroke-linecap="round" />
+            <path d="M25 19.6a8 7.6 0 0 1 16 0z" fill="#ffc21a" />
+            <rect x="24" y="18.6" width="21.5" height="2.4" rx="1.2" fill="#f0b20f" />
+            <rect x="31.6" y="12" width="2.6" height="7.5" rx="1.3" fill="#f0b20f" />
+          </g>
+          <!-- front arm -->
+          <g class="arm arm-f">
+            <rect x="29.8" y="33" width="4.4" height="12.5" rx="2.2" fill="#46557a" />
+            <g class="fore">
+              <rect x="30" y="44" width="4" height="11" rx="2" fill="#46557a" />
+              <g class="mug-hand">
+                <rect x="31.5" y="51" width="6.5" height="8" rx="1.3" fill="#f4f1ff" />
+                <rect x="31.5" y="53.8" width="6.5" height="1.4" fill="#ff6b57" />
+              </g>
+              <circle cx="32" cy="55.6" r="2.4" fill="#e8b48f" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </svg>
+  </button>
+</div>
+
+<script>
+  class Aborted extends Error {}
+
+  type Pose = 'type' | 'sit' | 'reach' | 'sip' | 'idle' | 'walk' | 'stretch' | 'crouch' | 'shake';
+
+  const crew = document.querySelector<HTMLElement>('[data-crew]');
+  const wrap = crew?.closest<HTMLElement>('[data-clock-wrap]');
+  const worker = crew?.querySelector<HTMLButtonElement>('[data-worker]');
+  const laptop = crew?.querySelector<HTMLElement>('[data-laptop]');
+  const mug = crew?.querySelector<HTMLElement>('[data-mug]');
+  const bubble = crew?.querySelector<HTMLElement>('[data-bubble]');
+
+  if (crew && wrap && worker && laptop && mug && bubble) {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const GLYPHS = ['</>', '{ }', '( )', '=>', ';', '[ ]', '01', '#'];
+
+    // ---------- geometry (px) ----------
+    const geo = () => {
+      const u = parseFloat(getComputedStyle(crew).fontSize) || 1; // 1 drawing unit in px
+      const w = wrap.getBoundingClientRect();
+      const cards = wrap.querySelectorAll<HTMLElement>('.card');
+      const first = cards[0]!.getBoundingClientRect();
+      const last = cards[cards.length - 1]!.getBoundingClientRect();
+      const seat = first.left - w.left - 11 * u;
+      return {
+        u,
+        seat,
+        end: last.right - w.left - 49 * u,
+        mugX: seat + 13 * u,
+        lap: { x: seat + 37 * u, y: -10 * u },
+        desk: { x: seat + 40 * u, y: 0 },
+        hands: { x: seat + 39 * u, y: -27 * u },
+        cardH: first.height,
+      };
+    };
+
+    // ---------- small helpers ----------
+    const T = (x: number, y = 0, r = 0) => `translate(${x}px, ${y}px) rotate(${r}deg)`;
+    const matrixOf = (el: HTMLElement) => {
+      const t = getComputedStyle(el).transform;
+      return new DOMMatrixReadOnly(t && t !== 'none' ? t : undefined);
+    };
+    const setPose = (p: Pose) => (worker.dataset.pose = p);
+    const setSeated = (on: boolean) => (worker.dataset.seated = on ? '1' : '0');
+    const face = (dir: 'left' | 'right') => worker.classList.toggle('face-left', dir === 'left');
+    const rand = (a: number, b: number) => a + Math.random() * (b - a);
+
+    const wait = (ms: number, sig: AbortSignal) =>
+      new Promise<void>((resolve, reject) => {
+        if (sig.aborted) return reject(new Aborted());
+        const onAbort = () => {
+          clearTimeout(t);
+          reject(new Aborted());
+        };
+        const t = setTimeout(() => {
+          sig.removeEventListener('abort', onAbort);
+          resolve();
+        }, ms);
+        sig.addEventListener('abort', onAbort, { once: true });
+      });
+
+    /** Run a Web Animation; on finish or abort, freeze the element where it is. */
+    const play = (el: HTMLElement, frames: Keyframe[], duration: number, sig: AbortSignal, easing = 'ease-in-out') =>
+      new Promise<void>((resolve, reject) => {
+        if (sig.aborted) return reject(new Aborted());
+        const anim = el.animate(frames, { duration, easing, fill: 'forwards' });
+        const freeze = () => {
+          try {
+            anim.commitStyles();
+          } catch {
+            /* element not rendered */
+          }
+          anim.cancel();
+        };
+        const onAbort = () => {
+          freeze();
+          reject(new Aborted());
+        };
+        sig.addEventListener('abort', onAbort, { once: true });
+        anim.finished.then(
+          () => {
+            sig.removeEventListener('abort', onAbort);
+            freeze();
+            resolve();
+          },
+          () => {},
+        );
+      });
+
+    let bubbleTimer = 0;
+    const say = (text: string, ms = 1400) => {
+      bubble.textContent = text;
+      bubble.classList.add('show');
+      clearTimeout(bubbleTimer);
+      bubbleTimer = window.setTimeout(() => bubble.classList.remove('show'), ms);
+    };
+
+    const spawnGlyph = () => {
+      const { u } = geo();
+      const m = matrixOf(laptop);
+      const g = document.createElement('span');
+      g.className = 'glyph';
+      g.textContent = GLYPHS[Math.floor(Math.random() * GLYPHS.length)] ?? '{ }';
+      g.style.left = `${m.m41 + rand(10, 26) * u}px`;
+      g.style.bottom = `${-m.m42 + 20 * u}px`;
+      crew.appendChild(g);
+      g.addEventListener('animationend', () => g.remove());
+    };
+
+    // ---------- actions ----------
+    const walkTo = async (x: number, sig: AbortSignal) => {
+      const { u } = geo();
+      const from = matrixOf(worker).m41;
+      if (Math.abs(x - from) < 1) return;
+      face(x < from ? 'left' : 'right');
+      setPose('walk');
+      const speed = 95 * u; // px per second
+      await play(worker, [{ transform: T(x) }], (Math.abs(x - from) / speed) * 1000, sig, 'linear');
+      setPose('idle');
+    };
+
+    const code = async (ms: number, sig: AbortSignal) => {
+      setPose('type');
+      const timer = window.setInterval(spawnGlyph, 650);
+      try {
+        await wait(ms, sig);
+      } finally {
+        clearInterval(timer);
+      }
+    };
+
+    const sip = async (sig: AbortSignal) => {
+      setPose('reach');
+      await wait(450, sig);
+      mug.classList.add('taken');
+      worker.classList.add('has-mug');
+      setPose('sip');
+      await wait(1600, sig);
+      setPose('reach');
+      await wait(450, sig);
+      mug.classList.remove('taken');
+      worker.classList.remove('has-mug');
+      setPose('sit');
+      await wait(350, sig);
+    };
+
+    /** Laptop from wherever it is → hands → lap, then sit and get back to it. */
+    const sitDownWithLaptop = async (sig: AbortSignal, fromBelow = false) => {
+      const G = geo();
+      face('right');
+      setPose('crouch');
+      await wait(300, sig);
+      const frames: Keyframe[] = fromBelow
+        ? [{ transform: T(G.hands.x + 10 * G.u, G.cardH * 0.3, 60), offset: 0.5 }, { transform: T(G.hands.x, G.hands.y, 0) }]
+        : [{ transform: T(G.hands.x, G.hands.y, 0) }];
+      await play(laptop, frames, fromBelow ? 700 : 420, sig);
+      setPose('idle');
+      await wait(200, sig);
+      setSeated(true);
+      setPose('sit');
+      await play(laptop, [{ transform: T(G.lap.x, G.lap.y, 0) }], 420, sig);
+    };
+
+    const wander = async (sig: AbortSignal) => {
+      const G = geo();
+      setPose('sit');
+      await play(laptop, [{ transform: T(G.desk.x, G.desk.y, 0) }], 450, sig);
+      setSeated(false);
+      setPose('idle');
+      await wait(500, sig);
+      await walkTo(G.end, sig);
+      face('right');
+      setPose('stretch');
+      say('Ahh…');
+      await wait(1300, sig);
+      setPose('idle');
+      await wait(400, sig);
+      await walkTo(geo().seat, sig);
+      await sitDownWithLaptop(sig);
+    };
+
+    const life = async (sig: AbortSignal) => {
+      for (;;) {
+        await code(rand(5500, 7500), sig);
+        await sip(sig);
+        await code(rand(4500, 6500), sig);
+        await wander(sig);
+      }
+    };
+
+    /** Tap reaction: shake, laptop tumbles off the card, go get it, back to work. */
+    let shaking = false;
+    const oops = async (sig: AbortSignal) => {
+      shaking = true;
+      try {
+        const G = geo();
+        mug.classList.remove('taken');
+        worker.classList.remove('has-mug');
+        setPose('shake');
+        say('Whoa!');
+
+        const m = matrixOf(laptop);
+        const lx = m.m41;
+        const ly = m.m42;
+        const land = G.cardH + 2;
+        const fall = play(
+          laptop,
+          [
+            { transform: T(lx, ly, 0) },
+            { transform: T(lx + 6 * G.u, ly - 12 * G.u, -18), offset: 0.22, easing: 'ease-in' },
+            { transform: T(lx + 14 * G.u, land, 170), offset: 0.78, easing: 'ease-out' },
+            { transform: T(lx + 15 * G.u, land - 6 * G.u, 176), offset: 0.88, easing: 'ease-in' },
+            { transform: T(lx + 16 * G.u, land, 180) },
+          ],
+          1150,
+          sig,
+          'linear',
+        );
+        await wait(750, sig);
+        setPose(worker.dataset.seated === '1' ? 'sit' : 'idle');
+        await fall;
+        say('Oops…', 1200);
+        await wait(700, sig);
+
+        if (worker.dataset.seated === '1') {
+          setSeated(false);
+          setPose('idle');
+          await wait(350, sig);
+        }
+        await walkTo(geo().seat, sig);
+        await sitDownWithLaptop(sig, true);
+      } finally {
+        shaking = false;
+      }
+    };
+
+    // ---------- run / restart ----------
+    let ctrl = new AbortController();
+    const run = (first?: (sig: AbortSignal) => Promise<void>) => {
+      ctrl.abort();
+      ctrl = new AbortController();
+      const sig = ctrl.signal;
+      (async () => {
+        try {
+          if (first) await first(sig);
+          if (!reduceMotion) await life(sig);
+        } catch (err) {
+          if (!(err instanceof Aborted)) console.error(err);
+        }
+      })();
+    };
+
+    /** Put him back in his seat, coding, without animation. */
+    const snapToSeat = () => {
+      const G = geo();
+      worker.getAnimations().forEach((a) => a.cancel());
+      laptop.getAnimations().forEach((a) => a.cancel());
+      face('right');
+      setSeated(true);
+      setPose('type');
+      worker.style.transform = T(G.seat);
+      laptop.style.transform = T(G.lap.x, G.lap.y, 0);
+      mug.style.transform = T(G.mugX);
+      mug.classList.remove('taken');
+      worker.classList.remove('has-mug');
+      crew.classList.add('ready');
+    };
+
+    // (Re)start whenever the clock changes size: first layout, resize, days going 3 → 2 digits…
+    let resizeTimer = 0;
+    let lastWidth = -1;
+    new ResizeObserver(() => {
+      const width = Math.round(wrap.getBoundingClientRect().width);
+      if (width === lastWidth) return;
+      lastWidth = width;
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        ctrl.abort(); // stop the current routine before moving him
+        snapToSeat();
+        run();
+      }, 450);
+    }).observe(wrap);
+
+    if (!reduceMotion) {
+      worker.addEventListener('click', () => {
+        if (shaking) return;
+        run(oops);
+      });
+    }
+  }
+</script>
+
+<style>
+  .crew {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 80em;
+    /* 1em = one drawing unit; the worker is 80 units tall */
+    font-size: calc(var(--wh) / 80);
+    pointer-events: none;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .crew.ready {
+    opacity: 1;
+  }
+
+  .worker,
+  .laptop,
+  .mug {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+  }
+
+  .worker {
+    width: 64em;
+    height: 80em;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 2;
+  }
+  .figure {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    transform-origin: 53% 50%;
+  }
+  .worker.face-left .figure {
+    transform: scaleX(-1);
+  }
+
+  .laptop {
+    width: 24em;
+    height: 18em;
+    z-index: 3;
+  }
+  .laptop svg,
+  .mug svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .screen {
+    animation: screen 2.4s ease-in-out infinite;
+  }
+
+  .mug {
+    width: 10em;
+    height: 10em;
+    z-index: 1;
+    transition: opacity 0.15s;
+  }
+  .mug.taken {
+    opacity: 0;
+  }
+  .steam {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.45);
+    stroke-width: 0.6;
+    stroke-linecap: round;
+    animation: steam 2.2s ease-in-out infinite;
+  }
+  .steam.s2 {
+    animation-delay: 1.1s;
+  }
+
+  /* ---------- speech bubble ---------- */
+  .bubble {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    padding: 3px 9px;
+    border-radius: 10px;
+    background: var(--text);
+    color: #0b0a12;
+    font: 600 12px/1.4 var(--font-body);
+    white-space: nowrap;
+    transform: translate(-30%, 4px) scale(0.6);
+    opacity: 0;
+    transition:
+      opacity 0.2s,
+      transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);
+    pointer-events: none;
+  }
+  .bubble.show {
+    opacity: 1;
+    transform: translate(-30%, -4px) scale(1);
+  }
+
+  /* ---------- floating code glyphs ---------- */
+  .crew :global(.glyph) {
+    position: absolute;
+    font: 600 max(9px, 10em) / 1 ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    color: #9ad1ff;
+    pointer-events: none;
+    animation: glyph 1.8s ease-out forwards;
+  }
+
+  /* ---------- limbs & poses ---------- */
+  .upper,
+  .arm,
+  .fore,
+  .head,
+  .mug-hand {
+    transition: transform 0.35s cubic-bezier(0.3, 0.7, 0.3, 1);
+  }
+  .upper { transform-origin: 32px 55px; }
+  .arm { transform-origin: 32px 35px; }
+  .fore { transform-origin: 32px 45px; transform: rotate(-6deg); }
+  .head { transform-origin: 33px 28px; }
+  .leg { transform-origin: 32px 55px; }
+  .body { transform-origin: 34px 80px; }
+  .mug-hand { transform-origin: 32px 55.6px; opacity: 0; }
+  .worker.has-mug .mug-hand { opacity: 1; }
+
+  /* seated vs standing */
+  .legs-sit { opacity: 0; }
+  [data-seated='1'] .legs-sit { opacity: 1; }
+  [data-seated='1'] .legs-stand { opacity: 0; }
+  [data-seated='1'] .upper { transform: translateY(21px); }
+
+  /* typing */
+  [data-pose='type'] .arm-f { transform: rotate(-30deg); }
+  [data-pose='type'] .arm-b { transform: rotate(-22deg); }
+  [data-pose='type'] .arm-f .fore { animation: typeF 0.24s ease-in-out infinite alternate; }
+  [data-pose='type'] .arm-b .fore { animation: typeB 0.24s 0.12s ease-in-out infinite alternate; }
+  [data-pose='type'] .head { animation: nod 1.6s ease-in-out infinite; }
+
+  /* resting on lap */
+  [data-pose='sit'] .arm-f { transform: rotate(-24deg); }
+  [data-pose='sit'] .arm-b { transform: rotate(-18deg); }
+  [data-pose='sit'] .fore { transform: rotate(-48deg); }
+
+  /* coffee */
+  [data-pose='reach'] .arm-f { transform: rotate(36deg); }
+  [data-pose='reach'] .arm-f .fore { transform: rotate(-16deg); }
+  [data-pose='reach'] .mug-hand { transform: rotate(-20deg); }
+  [data-pose='reach'] .arm-b,
+  [data-pose='sip'] .arm-b { transform: rotate(-20deg); }
+  [data-pose='reach'] .arm-b .fore,
+  [data-pose='sip'] .arm-b .fore { transform: rotate(-50deg); }
+  [data-pose='sip'] .arm-f { transform: rotate(-60deg); }
+  [data-pose='sip'] .arm-f .fore { transform: rotate(-110deg); }
+  [data-pose='sip'] .mug-hand { transform: rotate(140deg); }
+  [data-pose='sip'] .head { transform: rotate(-9deg); }
+
+  /* walking */
+  [data-pose='walk'] .leg-f { animation: legSwing 0.5s ease-in-out infinite alternate; }
+  [data-pose='walk'] .leg-b { animation: legSwing 0.5s ease-in-out infinite alternate-reverse; }
+  [data-pose='walk'] .arm-f { animation: armSwing 0.5s ease-in-out infinite alternate-reverse; }
+  [data-pose='walk'] .arm-b { animation: armSwing 0.5s ease-in-out infinite alternate; }
+  [data-pose='walk'] .body { animation: bob 0.25s ease-in-out infinite alternate; }
+
+  /* stretch at the end of the walk */
+  [data-pose='stretch'] .arm { transform: rotate(-168deg); }
+  [data-pose='stretch'] .fore { transform: rotate(-8deg); }
+  [data-pose='stretch'] .head { transform: rotate(-10deg); }
+
+  /* bending over to pick the laptop up */
+  [data-pose='crouch'] .upper { transform: rotate(26deg); }
+  [data-pose='crouch'] .arm { transform: rotate(-35deg); }
+  [data-pose='crouch'] .fore { transform: rotate(-20deg); }
+
+  /* tapped */
+  [data-pose='shake'] .body { animation: shake 0.14s ease-in-out 5 alternate; }
+  [data-pose='shake'] .arm-f { animation: flail 0.14s ease-in-out infinite alternate; }
+  [data-pose='shake'] .arm-b { animation: flail 0.14s 0.07s ease-in-out infinite alternate-reverse; }
+  [data-pose='shake'] .eye { transform: scale(1.6); transform-origin: 37.6px 20.4px; }
+
+  .eye { animation: blink 4.5s infinite; transform-origin: 37.6px 20.4px; }
+
+  @keyframes typeF { from { transform: rotate(-56deg); } to { transform: rotate(-68deg); } }
+  @keyframes typeB { from { transform: rotate(-60deg); } to { transform: rotate(-72deg); } }
+  @keyframes nod { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(7deg); } }
+  @keyframes legSwing { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+  @keyframes armSwing { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-1.6px); } }
+  @keyframes shake {
+    from { transform: rotate(-9deg) translateX(-1.5px); }
+    to { transform: rotate(9deg) translateX(1.5px); }
+  }
+  @keyframes flail { from { transform: rotate(-150deg); } to { transform: rotate(-60deg); } }
+  @keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(0.1); } }
+  @keyframes screen { 0%, 100% { opacity: 0.9; } 50% { opacity: 0.55; } }
+  @keyframes steam {
+    0% { opacity: 0; transform: translateY(1px); }
+    40% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-2.5px); }
+  }
+  @keyframes glyph {
+    0% { opacity: 0; transform: translateY(0) scale(0.8); }
+    20% { opacity: 0.9; }
+    100% { opacity: 0; transform: translateY(-4.5em) scale(1); }
+  }
+</style>

@@ -1,0 +1,618 @@
+---
+/**
+ * Animated construction site, drawn as inline SVG and animated purely with CSS
+ * (no JS needed except the little "live cam" clock).
+ *
+ * Crane cycle (14s): lower hook to the beam pile → lift → travel to the tower →
+ * lower → set the beam on top of the building → return. The cable, hook, load and
+ * the "placed" beam all share the same timeline so they stay perfectly in sync.
+ */
+
+// Deterministic pseudo-random so every build renders identically.
+let seed = 11;
+const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+const floorTops = [260, 300, 340];
+const cols = [179, 209, 239, 269, 299];
+const windows = floorTops.flatMap((top) =>
+  cols.flatMap((x, ci) => {
+    if (ci === 2) return []; // centre column: neon brand sign + entrance
+    return [
+      {
+        x,
+        y: top + 8,
+        delay: (rand() * 9).toFixed(2),
+        tone: rand() > 0.72 ? 'coral' : 'gold',
+        o: (0.5 + rand() * 0.5).toFixed(2),
+      },
+    ];
+  }),
+);
+
+// Crane lattice paths
+const zig = (from: number, to: number, step: number, a: number, b: number, vertical: boolean) => {
+  let d = '';
+  let flip = false;
+  for (let p = from; p <= to; p += step) {
+    const q = flip ? b : a;
+    d += `${d ? 'L' : 'M'}${vertical ? `${q} ${p}` : `${p} ${q}`} `;
+    flip = !flip;
+  }
+  return d.trim();
+};
+const mastZig = zig(64, 372, 18, 442, 458, true);
+const jibZig = zig(140, 440, 16, 76, 62, false);
+const counterZig = zig(460, 546, 14, 62, 72, false);
+
+const skyline = [
+  { x: 0, y: 270, w: 46 },
+  { x: 40, y: 232, w: 38 },
+  { x: 84, y: 288, w: 52 },
+  { x: 132, y: 248, w: 30 },
+  { x: 360, y: 296, w: 40 },
+  { x: 400, y: 252, w: 34 },
+  { x: 480, y: 226, w: 44 },
+  { x: 528, y: 280, w: 72 },
+];
+const skyWindows = skyline.flatMap((b) =>
+  Array.from({ length: 4 }, () => ({
+    x: b.x + 6 + Math.floor(rand() * (b.w - 12)),
+    y: b.y + 10 + Math.floor(rand() * (370 - b.y - 20)),
+    delay: (rand() * 6).toFixed(2),
+  })),
+);
+
+const sparks = Array.from({ length: 9 }, (_, i) => ({
+  dx: Math.round(-18 + rand() * 30),
+  dy: Math.round(4 + rand() * 26),
+  delay: (i * 0.11).toFixed(2),
+}));
+
+const flashes = [
+  { x: 150, y: 408, d: 0.4 },
+  { x: 352, y: 418, d: 2.1 },
+  { x: 118, y: 432, d: 3.3 },
+  { x: 384, y: 400, d: 1.2 },
+  { x: 178, y: 428, d: 4.4 },
+  { x: 330, y: 434, d: 2.9 },
+];
+
+const stars = Array.from({ length: 26 }, () => ({
+  x: Math.round(rand() * 600),
+  y: Math.round(rand() * 200),
+  r: (0.5 + rand() * 1.1).toFixed(2),
+  delay: (rand() * 4).toFixed(2),
+}));
+---
+
+<figure class="scene" aria-label="Animated illustration: a tower crane lifts a steel beam onto the Bipgram building while a red carpet is rolled out">
+  <div class="cam-ui" aria-hidden="true">
+    <span class="rec"><i></i> LIVE · SITE CAM 01</span>
+    <span class="clock" data-cam-clock>--:--:--</span>
+  </div>
+  <span class="corner tl" aria-hidden="true"></span>
+  <span class="corner tr" aria-hidden="true"></span>
+  <span class="corner bl" aria-hidden="true"></span>
+  <span class="corner br" aria-hidden="true"></span>
+
+  <svg viewBox="0 0 600 440" role="img" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id="cs-bar"><rect x="0" y="0" width="126" height="344" rx="58" /></clipPath>
+      <pattern id="cs-hazard" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="5" height="10" fill="#ffc21a" />
+        <rect x="5" width="5" height="10" fill="#14121f" />
+      </pattern>
+    </defs>
+
+    <!-- Stars -->
+    <g class="stars">
+      {stars.map((s) => <circle cx={s.x} cy={s.y} r={s.r} style={`animation-delay:${s.delay}s`} />)}
+    </g>
+
+    <!-- Premiere spotlights -->
+    <g class="spots">
+      <g transform="translate(70 440)"><polygon class="spot spot-a" points="0,0 -60,-520 60,-520" /></g>
+      <g transform="translate(530 440)"><polygon class="spot spot-b" points="0,0 -60,-520 60,-520" /></g>
+    </g>
+
+    <!-- Distant skyline -->
+    <g class="skyline">
+      {skyline.map((b) => <rect x={b.x} y={b.y} width={b.w} height={380 - b.y} />)}
+      {skyWindows.map((w) => <rect class="sky-win" x={w.x} y={w.y} width="3" height="4" style={`animation-delay:${w.delay}s`} />)}
+    </g>
+
+    <!-- Ground -->
+    <rect x="0" y="380" width="600" height="60" fill="#100e22" />
+    <rect x="0" y="379" width="600" height="2" fill="#3a2f6e" />
+
+    <!-- ===== Building ===== -->
+    <g class="building">
+      <!-- Completed floors (rise in on load) -->
+      <g class="rise" style="--d:.1s">
+        <rect x="170" y="260" width="160" height="120" fill="#1a1840" />
+        <rect x="170" y="258" width="160" height="4" fill="#4a3f86" />
+        <rect x="170" y="298" width="160" height="4" fill="#3a3170" />
+        <rect x="170" y="338" width="160" height="4" fill="#3a3170" />
+        {
+          windows.map((w) => (
+            <rect
+              class:list={['win', w.tone]}
+              x={w.x}
+              y={w.y}
+              width="22"
+              height="24"
+              rx="2"
+              style={`--o:${w.o};animation-delay:${w.delay}s`}
+            />
+          ))
+        }
+        <!-- Neon Bipgram sign (simplified brand mark) -->
+        <g class="neon" transform="translate(233.9 271.1) scale(0.095)">
+          <rect x="-24" y="-22" width="386" height="442" rx="60" fill="#0b0920" stroke="#2c2766" stroke-width="10" />
+          <circle cx="228" cy="236" r="106" fill="#ff6b57" />
+          <path d="M282 318 L302 392 L236 340 Z" fill="#ff6b57" />
+          <rect x="0" y="0" width="126" height="344" rx="58" fill="#4f4bff" />
+          <path d="M38 300 V394 L104 340 Z" fill="#4f4bff" />
+          <circle cx="228" cy="236" r="106" fill="#5a3aa8" clip-path="url(#cs-bar)" />
+        </g>
+        <!-- Entrance -->
+        <rect x="226" y="338" width="48" height="5" fill="#ffd36a" />
+        <rect class="door" x="232" y="344" width="36" height="36" rx="2" fill="#ffcf7a" />
+        <line x1="250" y1="344" x2="250" y2="380" stroke="#c46a1a" stroke-width="1.2" />
+      </g>
+
+      <!-- Steel skeleton (floor 4) -->
+      <g class="rise steel" style="--d:.45s">
+        {[170, 210, 248, 286, 326].map((x) => <rect x={x} y="222" width="4" height="38" />)}
+        <rect x="170" y="222" width="50" height="4" />
+        <rect x="280" y="222" width="50" height="4" />
+        <path d="M174 226 L210 258 M210 226 L174 258 M290 226 L326 258 M326 226 L290 258" fill="none" stroke-width="1.6" />
+      </g>
+
+      <!-- The beam the crane delivers -->
+      <rect class="placed-beam" x="220" y="218" width="60" height="8" rx="1" />
+
+      <!-- Scaffolding -->
+      <g class="rise scaffold" style="--d:.7s">
+        <path d="M334 216 V380 M352 216 V380 M332 260 H354 M332 300 H354 M332 340 H354 M332 220 H354 M334 260 L352 300 M352 300 L334 340 M334 340 L352 380 M352 220 L334 260" />
+        <rect x="331" y="256" width="25" height="4" fill="#8a6a3a" />
+        <rect x="331" y="296" width="25" height="4" fill="#8a6a3a" />
+      </g>
+
+      <!-- Welder on the 3rd-floor slab -->
+      <g class="rise worker" style="--d:.9s">
+        <rect x="264" y="248" width="7" height="12" rx="2" fill="#ff7a1a" />
+        <rect x="264" y="252" width="7" height="2" fill="#fff" opacity=".8" />
+        <circle cx="267.5" cy="244" r="3.2" fill="#f2c39b" />
+        <path d="M263.6 243.6 a3.9 3.9 0 0 1 7.8 0 z" fill="#ffc21a" />
+        <rect x="262.5" y="243.2" width="10" height="1.4" rx=".7" fill="#ffc21a" />
+        <path class="arm" d="M270 251 L280 246" stroke="#ff7a1a" stroke-width="2.4" stroke-linecap="round" />
+        <rect x="279" y="244.6" width="7" height="2" rx="1" fill="#cfd3e6" />
+      </g>
+      <g transform="translate(287 245)">
+        <circle class="weld-glow" r="3" fill="#fff6d8" />
+        <g class="sparks">
+          {sparks.map((s) => <circle r="1.1" style={`--dx:${s.dx};--dy:${s.dy};animation-delay:${s.delay}s`} />)}
+        </g>
+      </g>
+    </g>
+
+    <!-- Beam pile next to the crane -->
+    <g class="pile">
+      <rect x="370" y="374" width="52" height="6" rx="1" />
+      <rect x="370" y="368" width="52" height="6" rx="1" opacity=".9" />
+      <rect class="pile-top" x="366" y="358" width="60" height="8" rx="1" />
+    </g>
+
+    <!-- ===== Tower crane ===== -->
+    <g class="crane">
+      <rect x="424" y="372" width="52" height="10" rx="2" fill="#2a2450" />
+      <rect x="424" y="372" width="52" height="4" fill="url(#cs-hazard)" />
+      <g class="steel-y">
+        <rect x="440" y="62" width="3" height="312" />
+        <rect x="457" y="62" width="3" height="312" />
+        <path d={mastZig} fill="none" stroke-width="1.4" />
+        <rect x="140" y="60" width="406" height="3" />
+        <rect x="140" y="75" width="300" height="2.4" />
+        <path d={jibZig} fill="none" stroke-width="1.2" />
+        <rect x="460" y="71" width="86" height="2.4" />
+        <path d={counterZig} fill="none" stroke-width="1.2" />
+        <polygon points="443,62 450,20 457,62" />
+      </g>
+      <path d="M450 22 L142 61 M450 22 L544 61" stroke="#cfc7ff" stroke-opacity=".55" stroke-width=".8" fill="none" />
+      <rect x="516" y="73" width="30" height="24" rx="2" fill="url(#cs-hazard)" />
+      <rect x="516" y="73" width="30" height="24" rx="2" fill="none" stroke="#14121f" stroke-width="1.2" />
+      <!-- Operator cab -->
+      <rect x="461" y="78" width="22" height="18" rx="3" fill="#ffc21a" />
+      <rect x="465" y="81" width="14" height="8" rx="1.5" fill="#bfe8ff" class="cab-glass" />
+      <!-- Warning beacons -->
+      <circle class="beacon" cx="450" cy="18" r="3" />
+      <circle class="beacon b2" cx="142" cy="58" r="2.4" />
+
+      <!-- Trolley + cable + hook + load (all synced) -->
+      <g transform="translate(0 77)">
+        <g class="trolley">
+          <rect x="-9" y="-2" width="18" height="6" rx="1.5" fill="#ffc21a" />
+          <circle cx="-5" cy="-2" r="1.6" fill="#14121f" />
+          <circle cx="5" cy="-2" r="1.6" fill="#14121f" />
+          <g class="swing">
+            <rect class="cable" x="-0.7" y="0" width="1.4" height="1" />
+            <g class="hook">
+              <rect x="-5" y="0" width="10" height="7" rx="1.5" fill="#ffc21a" />
+              <path d="M0 7 v4 a3 3 0 1 1 -3 3" fill="none" stroke="#d9dcef" stroke-width="1.6" stroke-linecap="round" />
+              <g class="load">
+                <path d="M0 11 L-26 18 M0 11 L26 18" stroke="#d9dcef" stroke-width=".9" fill="none" />
+                <rect class="load-beam" x="-30" y="18" width="60" height="8" rx="1" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- ===== Red carpet & premiere details ===== -->
+    <g class="carpet-wrap">
+      <polygon class="carpet" points="234,380 266,380 304,440 196,440" fill="#b3123f" />
+    </g>
+    <g class="stanchions">
+      <path d="M224 392 Q219 404 213 412 M213 412 Q207 425 201 432 M276 392 Q281 404 287 412 M287 412 Q293 425 299 432" fill="none" stroke="#b3123f" stroke-width="2" stroke-linecap="round" />
+      {
+        [
+          [224, 392],
+          [213, 412],
+          [201, 432],
+          [276, 392],
+          [287, 412],
+          [299, 432],
+        ].map(([x, y]) => (
+          <g>
+            <rect x={x - 1} y={y - 12} width="2" height="12" fill="#ffd36a" />
+            <circle cx={x} cy={y - 12.5} r="2" fill="#ffe29a" />
+            <ellipse cx={x} cy={y} rx="3.4" ry="1.2" fill="#ffd36a" />
+          </g>
+        ))
+      }
+    </g>
+
+    <!-- Barricade + cones -->
+    <g class="barricade">
+      <path d="M58 380 L66 352 M112 380 L104 352" stroke="#d9dcef" stroke-width="2.4" />
+      <rect x="54" y="352" width="62" height="11" rx="2" fill="url(#cs-hazard)" />
+      <rect x="54" y="352" width="62" height="11" rx="2" fill="none" stroke="#14121f" />
+      <circle class="beacon b3" cx="58" cy="349" r="2.4" />
+    </g>
+    {
+      [
+        [140, 380],
+        [520, 380],
+        [548, 380],
+      ].map(([x, y]) => (
+        <g class="cone" transform={`translate(${x} ${y})`}>
+          <path d="M-6 0 L-2 -20 h4 L6 0 z" fill="#ff6a1a" />
+          <path d="M-4.2 -8 h8.4 l.8 4 h-10 z M-2.6 -15 h5.2 l.6 3 h-6.4 z" fill="#fff" />
+          <rect x="-9" y="-2" width="18" height="3" rx="1" fill="#ff6a1a" />
+        </g>
+      ))
+    }
+
+    <!-- Paparazzi flashes -->
+    <g class="flashes">
+      {flashes.map((f) => <circle cx={f.x} cy={f.y} r="5" fill="#ffffff" style={`animation-delay:${f.d}s`} />)}
+    </g>
+  </svg>
+
+  <figcaption class="sr-only">Bipgram is under construction.</figcaption>
+</figure>
+
+<script>
+  const clock = document.querySelector<HTMLElement>('[data-cam-clock]');
+  if (clock) {
+    const fmt = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const tick = () => (clock.textContent = fmt.format(new Date()));
+    tick();
+    setInterval(tick, 1000);
+  }
+</script>
+
+<style>
+  .scene {
+    position: relative;
+    margin: 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #0e0c1c;
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.9);
+    isolation: isolate;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+  }
+
+  /* --- Camera overlay --- */
+  .cam-ui {
+    position: absolute;
+    inset: 14px 18px auto;
+    display: flex;
+    justify-content: space-between;
+    font: 600 11px/1 ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.72);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .rec {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .rec i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff3b5c;
+    box-shadow: 0 0 10px #ff3b5c;
+    animation: blink 1.2s steps(2, start) infinite;
+  }
+  .corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .tl { top: 36px; left: 12px; border-right: 0; border-bottom: 0; }
+  .tr { top: 36px; right: 12px; border-left: 0; border-bottom: 0; }
+  .bl { bottom: 12px; left: 12px; border-right: 0; border-top: 0; }
+  .br { bottom: 12px; right: 12px; border-left: 0; border-top: 0; }
+
+  /* --- Atmosphere --- */
+  .stars circle {
+    fill: #fff;
+    animation: twinkle 4s ease-in-out infinite;
+  }
+  .spot {
+    fill: #fff8e6;
+    opacity: 0.05;
+    mix-blend-mode: screen;
+    animation: sweep 9s ease-in-out infinite alternate;
+  }
+  .spot-b {
+    animation-duration: 11s;
+    animation-direction: alternate-reverse;
+  }
+  .skyline rect {
+    fill: #17123a;
+    opacity: 0.85;
+  }
+  .skyline .sky-win {
+    fill: #ffd36a;
+    opacity: 0.2;
+    animation: flicker 6s ease-in-out infinite;
+  }
+
+  /* --- Building --- */
+  .rise {
+    animation: rise 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: var(--d, 0s);
+  }
+  .win {
+    fill: #ffd36a;
+    opacity: var(--o);
+    animation: windowLife 9s ease-in-out infinite;
+  }
+  .win.coral {
+    fill: #ff8a73;
+  }
+  .neon {
+    animation: neonOn 9s linear infinite;
+    filter: drop-shadow(0 0 3px rgba(120, 110, 255, 0.9)) drop-shadow(0 0 8px rgba(255, 107, 87, 0.6));
+  }
+  .door {
+    filter: drop-shadow(0 0 6px rgba(255, 190, 90, 0.8));
+  }
+  .steel rect,
+  .steel path,
+  .placed-beam,
+  .load-beam,
+  .pile rect {
+    fill: #ff8a3d;
+    stroke: #ff8a3d;
+  }
+  .steel rect,
+  .pile rect,
+  .placed-beam,
+  .load-beam {
+    stroke: none;
+  }
+  .steel path {
+    fill: none;
+    stroke: #d96a25;
+  }
+  .scaffold path {
+    fill: none;
+    stroke: #b9b3d6;
+    stroke-width: 1.4;
+    opacity: 0.8;
+  }
+  .worker .arm {
+    transform-origin: 270px 251px;
+    animation: weldArm 1.6s ease-in-out infinite;
+  }
+  .weld-glow {
+    filter: drop-shadow(0 0 3px #fff6d8);
+    animation: weld 0.18s steps(2) infinite;
+  }
+  .sparks circle {
+    fill: #ffe27a;
+    animation: spark 0.9s cubic-bezier(0.3, 0.6, 0.6, 1) infinite;
+  }
+
+  /* --- Crane --- */
+  .steel-y rect,
+  .steel-y polygon {
+    fill: #ffc21a;
+  }
+  .steel-y path {
+    stroke: #e8a90f;
+  }
+  .beacon {
+    fill: #ff3b5c;
+    animation: beacon 1.4s ease-in-out infinite;
+  }
+  .beacon.b2 { animation-delay: 0.7s; }
+  .beacon.b3 { fill: #ffb21a; animation-delay: 0.35s; }
+  .cab-glass {
+    animation: flicker 5s ease-in-out infinite;
+  }
+  .cable {
+    fill: #d9dcef;
+  }
+
+  /* One shared 14s timeline keeps every crane part in sync */
+  .trolley,
+  .swing,
+  .cable,
+  .hook,
+  .load,
+  .placed-beam,
+  .pile-top {
+    animation-duration: 14s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+  .trolley { animation-name: trolley; }
+  .swing { animation-name: swing; }
+  .cable { animation-name: cable; }
+  .hook { animation-name: hook; }
+  .load { animation-name: load; animation-timing-function: linear; }
+  .placed-beam { animation-name: placed; animation-timing-function: linear; }
+  .pile-top { animation-name: pileTop; animation-timing-function: linear; }
+
+  /* --- Red carpet --- */
+  .carpet {
+    transform-origin: 250px 380px;
+    animation: rollOut 1.6s 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .flashes circle {
+    opacity: 0;
+    filter: drop-shadow(0 0 6px #fff);
+    animation: flash 5.2s linear infinite;
+  }
+
+  /* ================= Keyframes ================= */
+  @keyframes trolley {
+    0%, 34% { transform: translateX(396px); }
+    52%, 82% { transform: translateX(250px); }
+    100% { transform: translateX(396px); }
+  }
+  @keyframes cable {
+    0% { transform: scaleY(50); }
+    12%, 20% { transform: scaleY(263); }
+    34%, 52% { transform: scaleY(50); }
+    64%, 72% { transform: scaleY(123); }
+    82%, 100% { transform: scaleY(50); }
+  }
+  @keyframes hook {
+    0% { transform: translateY(50px); }
+    12%, 20% { transform: translateY(263px); }
+    34%, 52% { transform: translateY(50px); }
+    64%, 72% { transform: translateY(123px); }
+    82%, 100% { transform: translateY(50px); }
+  }
+  @keyframes swing {
+    0%, 34% { transform: rotate(0deg); }
+    39% { transform: rotate(-4deg); }
+    49% { transform: rotate(-2deg); }
+    55% { transform: rotate(3deg); }
+    60% { transform: rotate(-1.2deg); }
+    64%, 82% { transform: rotate(0deg); }
+    87% { transform: rotate(3deg); }
+    96% { transform: rotate(-1.5deg); }
+    100% { transform: rotate(0deg); }
+  }
+  @keyframes load {
+    0%, 15.9% { opacity: 0; }
+    16%, 67.9% { opacity: 1; }
+    68%, 100% { opacity: 0; }
+  }
+  @keyframes placed {
+    0%, 67.9% { opacity: 0; }
+    68%, 94% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes pileTop {
+    0%, 15.9% { opacity: 1; }
+    16%, 90% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes windowLife {
+    0%, 100% { opacity: var(--o); }
+    45% { opacity: var(--o); }
+    50% { opacity: 0.12; }
+    58% { opacity: 0.12; }
+    62% { opacity: var(--o); }
+  }
+  @keyframes neonOn {
+    0%, 2% { opacity: 0.15; }
+    3%, 5% { opacity: 1; }
+    6%, 7% { opacity: 0.2; }
+    8%, 76% { opacity: 1; }
+    77% { opacity: 0.35; }
+    78%, 100% { opacity: 1; }
+  }
+  @keyframes weldArm {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-6deg); }
+  }
+  @keyframes weld {
+    0% { opacity: 1; }
+    100% { opacity: 0.35; }
+  }
+  @keyframes spark {
+    0% { transform: translate(0, 0); opacity: 1; }
+    100% { transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); opacity: 0; }
+  }
+  @keyframes beacon {
+    0%, 100% { opacity: 0.25; filter: none; }
+    50% { opacity: 1; filter: drop-shadow(0 0 4px #ff3b5c); }
+  }
+  @keyframes sweep {
+    from { transform: rotate(-22deg); }
+    to { transform: rotate(18deg); }
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 1; }
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 0.2; }
+    40% { opacity: 0.8; }
+    60% { opacity: 0.35; }
+  }
+  @keyframes rollOut {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+  @keyframes flash {
+    0%, 92% { opacity: 0; transform: scale(0.6); }
+    93% { opacity: 1; transform: scale(1.2); }
+    97% { opacity: 0; transform: scale(1); }
+    100% { opacity: 0; }
+  }
+  @keyframes blink {
+    to { visibility: hidden; }
+  }
+
+  .flashes circle {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+</style>

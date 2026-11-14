@@ -1,0 +1,164 @@
+---
+interface Props {
+  value: number;
+}
+const { value } = Astro.props;
+const pct = Math.max(0, Math.min(100, value));
+const steps = [
+  'Rolling out the red carpet',
+  'Verifying celebrity schedules',
+  'Polishing the VIP lounge',
+  'Hanging the velvet ropes',
+  'Testing backstage passes',
+  'Tuning the spotlights',
+];
+---
+
+<section class="progress" aria-label="Build progress" data-reveal>
+  <div class="head">
+    <div class="status">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="now" data-status data-steps={JSON.stringify(steps)}>{steps[0]}</span><span class="caret" aria-hidden="true"></span>
+    </div>
+    <span class="pct"><b data-count={pct}>{pct}</b>% built</span>
+  </div>
+  <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={pct}>
+    <div class="fill" style={`--pct:${pct}%`}></div>
+  </div>
+</section>
+
+<script>
+  // Typewriter cycling through what the crew is "working on"
+  const el = document.querySelector<HTMLElement>('[data-status]');
+  const steps: string[] = el ? JSON.parse(el.dataset.steps ?? '[]') : [];
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (el && steps.length && !reduceMotion) {
+    let i = 0;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const loop = async () => {
+      for (;;) {
+        await wait(2600);
+        const current = steps[i] ?? '';
+        for (let n = current.length; n >= 0; n--) {
+          el.textContent = current.slice(0, n);
+          await wait(22);
+        }
+        i = (i + 1) % steps.length;
+        const next = steps[i] ?? '';
+        for (let n = 1; n <= next.length; n++) {
+          el.textContent = next.slice(0, n);
+          await wait(45);
+        }
+      }
+    };
+    loop();
+  }
+
+  // Count the percentage up when it scrolls into view
+  const counter = document.querySelector<HTMLElement>('[data-count]');
+  if (counter && !reduceMotion) {
+    const target = Number(counter.dataset.count);
+    counter.textContent = '0';
+    new IntersectionObserver((entries, obs) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      obs.disconnect();
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / 1800);
+        counter.textContent = String(Math.round(target * (1 - Math.pow(1 - t, 3))));
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }).observe(counter);
+  }
+</script>
+
+<style>
+  .progress {
+    padding: 22px 24px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    min-width: 0;
+  }
+  .now {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .now::after {
+    content: '…';
+  }
+  .caret {
+    width: 7px;
+    height: 15px;
+    margin-left: -6px;
+    background: var(--gold);
+    animation: caret 1s steps(2, start) infinite;
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--hazard);
+    box-shadow: 0 0 0 0 rgba(255, 194, 26, 0.6);
+    animation: pulse 1.8s infinite;
+  }
+  .pct {
+    flex: none;
+    color: var(--muted);
+  }
+  .pct b {
+    font: 800 20px/1 var(--font-display);
+    color: var(--text);
+  }
+  .bar {
+    position: relative;
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+  }
+  .fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--pct);
+    border-radius: inherit;
+    background: repeating-linear-gradient(-45deg, var(--hazard) 0 14px, #14121f 14px 28px);
+    background-size: 40px 40px;
+    animation:
+      grow 2s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+      stripes 1s linear infinite;
+  }
+  @keyframes grow {
+    from { width: 0; }
+  }
+  @keyframes stripes {
+    to { background-position: 40px 0; }
+  }
+  @keyframes pulse {
+    70% { box-shadow: 0 0 0 10px rgba(255, 194, 26, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 194, 26, 0); }
+  }
+  @keyframes caret {
+    to { visibility: hidden; }
+  }
+</style>

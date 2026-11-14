@@ -1,0 +1,233 @@
+---
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import brandMark from '../assets/brand/bipgram-mark.png';
+import Starfield from '../components/Starfield.astro';
+import ConstructionScene from '../components/ConstructionScene.astro';
+import Countdown from '../components/Countdown.astro';
+import BuildProgress from '../components/BuildProgress.astro';
+import SocialIcon from '../components/SocialIcon.astro';
+import { site } from '../config';
+
+const year = new Date().getFullYear();
+---
+
+<Layout>
+  <Starfield />
+
+  <div class="container">
+    <header class="topbar">
+      <a href="/" class="logo" aria-label={`${site.name} home`}>
+        <Image src={brandMark} alt="" class="mark" width={34} height={40} densities={[1, 2]} loading="eager" />
+        <span class="wordmark">{site.name.toLowerCase()}</span>
+      </a>
+      {
+        site.socials.length > 0 && (
+          <nav class="socials" aria-label="Social media">
+            {site.socials.map((s) => (
+              <a href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
+                <SocialIcon name={s.icon} />
+              </a>
+            ))}
+          </nav>
+        )
+      }
+    </header>
+
+    <main>
+      <Countdown target={site.launchDate} />
+
+      <section class="hero">
+        <div class="copy">
+          <h1>
+            Meet the stars.<br />
+            <span class="accent">Up close.</span>
+          </h1>
+          <p class="lead">
+            <strong>{site.name}</strong> is building the most exclusive way to meet celebrities — verified meet-and-greets, live
+            video moments and backstage access. Our crew is laying the final stretch of red carpet.
+          </p>
+        </div>
+
+        <div class="visual">
+          <ConstructionScene />
+        </div>
+      </section>
+
+      <BuildProgress value={site.buildProgress} />
+    </main>
+  </div>
+
+  <footer class="container footer">
+    <p class="credit">
+      In development with
+      <a href={site.poweredBy.url} target="_blank" rel="noopener">{site.poweredBy.name}</a>
+    </p>
+    <div class="meta">
+      <p>© {year} {site.name}. All rights reserved.</p>
+      <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
+    </div>
+  </footer>
+</Layout>
+
+<script>
+  // Reveal-on-scroll for anything tagged with [data-reveal]
+  const items = document.querySelectorAll<HTMLElement>('[data-reveal]');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+    );
+    items.forEach((el) => io.observe(el));
+  } else {
+    items.forEach((el) => el.classList.add('is-visible'));
+  }
+</script>
+
+<style>
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: 26px;
+  }
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+  .logo :global(.mark) {
+    width: 34px;
+    height: 40px;
+    animation: wobble 6s ease-in-out infinite;
+    transform-origin: 50% 90%;
+  }
+  .wordmark {
+    font: 700 24px/1 var(--font-display);
+    letter-spacing: -0.03em;
+  }
+  .socials {
+    display: flex;
+    gap: 8px;
+  }
+  .socials a {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .socials a:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    align-items: center;
+    gap: clamp(32px, 5vw, 72px);
+    padding-block: clamp(24px, 4vw, 40px) clamp(48px, 7vw, 80px);
+    border-top: 1px solid var(--border);
+  }
+  .copy > :global(* + *) {
+    margin-top: 26px;
+  }
+  h1 {
+    margin-bottom: 0;
+    font: 700 clamp(42px, 6.4vw, 80px) / 1 var(--font-display);
+    letter-spacing: -0.04em;
+  }
+  .accent {
+    color: var(--coral);
+  }
+  .lead {
+    max-width: 540px;
+    margin-bottom: 0;
+    font-size: clamp(16px, 1.6vw, 18px);
+    color: var(--muted);
+  }
+  .lead strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .footer {
+    display: grid;
+    gap: 18px;
+    margin-top: clamp(48px, 7vw, 80px);
+    padding-block: 32px 44px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .footer p {
+    margin: 0;
+  }
+  .credit {
+    font-size: 15px;
+    text-align: center;
+  }
+  .credit a {
+    color: var(--text);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.3);
+    text-underline-offset: 4px;
+    transition: text-decoration-color 0.2s;
+  }
+  .credit a:hover {
+    text-decoration-color: var(--text);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .meta a {
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .meta a:hover {
+    color: var(--text);
+  }
+
+  @keyframes wobble {
+    0%, 80%, 100% { transform: rotate(0); }
+    85% { transform: rotate(-8deg); }
+    90% { transform: rotate(6deg); }
+    95% { transform: rotate(-3deg); }
+  }
+
+  @media (max-width: 960px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+    .copy {
+      text-align: center;
+    }
+    .copy > :global(*) {
+      margin-inline: auto;
+    }
+  }
+  @media (max-width: 640px) {
+    .meta {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+  }
+</style>

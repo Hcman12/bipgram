@@ -1,0 +1,390 @@
+---
+/**
+ * Split-flap countdown. Each unit is a card made of four halves: two static
+ * halves and two "flaps" that rotate in 3D when the value changes.
+ * A slim meter under each card drains as that unit runs down.
+ */
+interface Props {
+  target: string;
+}
+import CodingWorker from './CodingWorker.astro';
+
+const { target } = Astro.props;
+
+const units = [
+  { key: 'days', label: 'Days' },
+  { key: 'hours', label: 'Hours' },
+  { key: 'minutes', label: 'Minutes' },
+  { key: 'seconds', label: 'Seconds' },
+] as const;
+
+---
+
+<section class="launch" aria-labelledby="launch-title">
+  <p class="kicker" id="launch-title"><span class="pulse" aria-hidden="true"></span>Launching in</p>
+
+  <div class="clock-wrap" data-clock-wrap>
+  <CodingWorker />
+  <div class="clock" data-countdown={target} role="timer" aria-live="off">
+    {
+      units.map((u, i) => (
+        <>
+          {i > 0 && (
+            <span class="sep" aria-hidden="true">
+              <i />
+              <i />
+            </span>
+          )}
+          <div class="unit" data-unit={u.key} style={`--i:${i}`}>
+            <div class="card" aria-hidden="true">
+              <span class="half upper">
+                <span data-upper>00</span>
+              </span>
+              <span class="half lower">
+                <span data-lower>00</span>
+              </span>
+              <span class="flap flap-upper">
+                <span data-flap-upper>00</span>
+              </span>
+              <span class="flap flap-lower">
+                <span data-flap-lower>00</span>
+              </span>
+            </div>
+            <span class="meter" aria-hidden="true">
+              <i data-meter />
+            </span>
+            <span class="label">
+              <span class="sr-only" data-sr>
+                00
+              </span>
+              {u.label}
+            </span>
+          </div>
+        </>
+      ))
+    }
+  </div>
+  </div>
+
+  <p class="live" data-live hidden>We're live. Welcome to Bipgram.</p>
+</section>
+
+<script>
+  type Unit = 'days' | 'hours' | 'minutes' | 'seconds';
+
+  interface Cell {
+    card: HTMLElement;
+    upper: HTMLElement;
+    lower: HTMLElement;
+    flapUpper: HTMLElement;
+    flapLower: HTMLElement;
+    meter: HTMLElement;
+    sr: HTMLElement;
+    value: string;
+    fraction: number;
+  }
+
+  document.querySelectorAll<HTMLElement>('[data-countdown]').forEach((root) => {
+    const target = new Date(root.dataset.countdown ?? '').getTime();
+    if (Number.isNaN(target)) return;
+    const section = root.closest('section');
+    const liveMsg = section?.querySelector<HTMLElement>('[data-live]');
+
+    const cells = new Map<Unit, Cell>();
+    root.querySelectorAll<HTMLElement>('[data-unit]').forEach((el) => {
+      const q = (sel: string) => el.querySelector<HTMLElement>(sel)!;
+      cells.set(el.dataset.unit as Unit, {
+        card: q('.card'),
+        upper: q('[data-upper]'),
+        lower: q('[data-lower]'),
+        flapUpper: q('[data-flap-upper]'),
+        flapLower: q('[data-flap-lower]'),
+        meter: q('[data-meter]'),
+        sr: q('[data-sr]'),
+        value: '',
+        fraction: -1,
+      });
+    });
+
+    const set = (unit: Unit, value: number, fraction: number) => {
+      const cell = cells.get(unit);
+      if (!cell) return;
+
+      // Meter: drains smoothly, but snaps (no backwards sweep) when a unit wraps around.
+      const f = Math.max(0, Math.min(1, fraction));
+      if (f !== cell.fraction) {
+        cell.meter.style.transition = f > cell.fraction + 0.5 ? 'none' : '';
+        cell.meter.style.transform = `scaleX(${f})`;
+        cell.fraction = f;
+      }
+
+      const text = String(value).padStart(2, '0');
+      if (text === cell.value) return;
+      const previous = cell.value || text;
+      cell.value = text;
+      cell.sr.textContent = text;
+      cell.card.style.setProperty('--n', String(text.length));
+
+      // Static upper half shows the new value; lower half keeps the old one until the flap lands.
+      cell.upper.textContent = text;
+      cell.lower.textContent = previous;
+      cell.flapUpper.textContent = previous;
+      cell.flapLower.textContent = text;
+
+      cell.card.classList.remove('flipping');
+      void cell.card.offsetWidth; // restart animation
+      cell.card.classList.add('flipping');
+    };
+
+    // When the falling flap lands, the lower half can show the new value.
+    cells.forEach((cell) => {
+      cell.flapLower.parentElement?.addEventListener('animationend', () => {
+        cell.lower.textContent = cell.value;
+        cell.card.classList.remove('flipping');
+      });
+    });
+
+    const update = () => {
+      const diff = Math.max(0, target - Date.now());
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / 86_400);
+      const hours = Math.floor(totalSeconds / 3600) % 24;
+      const minutes = Math.floor(totalSeconds / 60) % 60;
+      const seconds = totalSeconds % 60;
+
+      set('days', days, days / 365);
+      set('hours', hours, hours / 24);
+      set('minutes', minutes, minutes / 60);
+      set('seconds', seconds, seconds / 60);
+
+      if (diff === 0) {
+        clearInterval(timer);
+        if (liveMsg) liveMsg.hidden = false;
+      }
+    };
+
+    // Tick exactly on the second boundary so all cards flip in unison.
+    let timer = 0;
+    update();
+    setTimeout(() => {
+      update();
+      timer = window.setInterval(update, 1000);
+    }, 1000 - (Date.now() % 1000));
+  });
+</script>
+
+<style>
+  .launch {
+    display: grid;
+    justify-items: center;
+    gap: 22px;
+    padding-block: clamp(28px, 6vw, 64px) clamp(36px, 6vw, 72px);
+    text-align: center;
+  }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    animation: rise 0.8s both;
+  }
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--coral);
+    animation: pulse 2s ease-out infinite;
+  }
+
+  /* The wrapper carries the clock's font-size so the worker can scale with the cards.
+     --wh = worker height; space above the cards is reserved for him. */
+  .clock-wrap {
+    --wh: clamp(76px, 1.15em, 136px);
+    position: relative;
+    margin-top: calc(var(--wh) * 0.9);
+    font-size: clamp(40px, 10.5vw, 118px);
+  }
+  .clock {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(8px, 1.6vw, 18px);
+  }
+
+  .unit {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    animation: rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation-delay: calc(0.12s + var(--i) * 0.09s);
+  }
+
+  /* ---------- Flip card ---------- */
+  .card {
+    --n: 2;
+    --radius: 0.14em;
+    position: relative;
+    width: calc(var(--n) * 0.6em + 0.44em);
+    height: 1.24em;
+    perspective: 5em;
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    border-radius: var(--radius);
+    box-shadow: 0 0.3em 0.6em -0.25em rgba(0, 0, 0, 0.75);
+    transition: width 0.4s ease;
+  }
+  /* hinge line */
+  .card::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(50% - 1px);
+    height: 2px;
+    background: var(--bg);
+    z-index: 5;
+  }
+
+  .half,
+  .flap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 50%;
+    overflow: hidden;
+    backface-visibility: hidden;
+  }
+  .half > span,
+  .flap > span {
+    display: block;
+    height: 1.24em;
+    line-height: 1.24em;
+    text-align: center;
+  }
+  .upper,
+  .flap-upper {
+    top: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: #1a1922;
+    transform-origin: 50% 100%;
+  }
+  .lower,
+  .flap-lower {
+    bottom: 0;
+    border-radius: 0 0 var(--radius) var(--radius);
+    background: #15141c;
+    transform-origin: 50% 0;
+  }
+  .lower > span,
+  .flap-lower > span {
+    margin-top: -0.62em;
+  }
+
+  .flap {
+    visibility: hidden;
+    z-index: 3;
+  }
+  .flipping .flap {
+    visibility: visible;
+  }
+  .flipping .flap-upper {
+    animation: flapDown 0.3s cubic-bezier(0.55, 0, 0.9, 0.6) both;
+  }
+  .flipping .flap-lower {
+    animation: flapUp 0.3s 0.3s cubic-bezier(0.1, 0.5, 0.3, 1) both;
+  }
+  /* soft shading on the moving flaps (solid tones, no gradients) */
+  .flipping .flap-upper > span {
+    animation: dim 0.3s both;
+  }
+
+  /* ---------- Meter + label ---------- */
+  .meter {
+    width: 100%;
+    height: 3px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+  .meter i {
+    display: block;
+    height: 100%;
+    background: var(--coral);
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 1s linear;
+  }
+  .label {
+    font-family: var(--font-body);
+    font-size: clamp(10px, 1.1vw, 12px);
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .sep {
+    display: grid;
+    gap: 0.22em;
+    height: 1.24em;
+    align-content: center;
+  }
+  .sep i {
+    display: block;
+    width: 0.09em;
+    height: 0.09em;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: blink 1s steps(1) infinite;
+  }
+
+  .live {
+    margin: 0;
+    font: 600 18px/1.4 var(--font-display);
+    color: var(--coral);
+  }
+
+  @keyframes flapDown {
+    from { transform: rotateX(0deg); }
+    to { transform: rotateX(-90deg); }
+  }
+  @keyframes flapUp {
+    from { transform: rotateX(90deg); }
+    to { transform: rotateX(0deg); }
+  }
+  @keyframes dim {
+    to { opacity: 0.55; }
+  }
+  @keyframes blink {
+    50% { opacity: 0.25; }
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 107, 87, 0.55); }
+    100% { box-shadow: 0 0 0 10px rgba(255, 107, 87, 0); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (max-width: 560px) {
+    .sep {
+      display: none;
+    }
+    .clock {
+      gap: 10px;
+    }
+    .clock-wrap {
+      font-size: clamp(34px, 11.5vw, 60px);
+    }
+  }
+</style>

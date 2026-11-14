@@ -1,0 +1,13 @@
+# dependencies & build output
+node_modules/
+dist/
+.astro/
+
+# environment: keep real values out of git, but commit the template
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
