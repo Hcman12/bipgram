@@ -63,9 +63,8 @@ const socialCandidates: Array<Omit<SocialLink, 'href'> & { href: string | undefi
 
 export const site = {
   name: 'Bipgram',
-  tagline: 'Meet the stars. Up close.',
-  description:
-    'Bipgram is building the most exclusive way to meet celebrities — verified meet-and-greets, live fan sessions and once-in-a-lifetime moments. Join the waitlist for first access.',
+  tagline: 'Something big is being built.',
+  description: 'Bipgram is under construction. Something new is on the way. Check back soon.',
 
   url: PUBLIC_SITE_URL,
 

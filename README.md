@@ -1,6 +1,6 @@
 # Bipgram — Coming Soon
 
-Animated "under construction" landing page for **Bipgram**, the app for meeting celebrities.
+Animated "under construction" landing page for **Bipgram**.
 Built with [Astro](https://astro.build) + TypeScript: static HTML, no framework runtime, tiny inline scripts.
 
 ## Commands
@@ -53,7 +53,7 @@ src/
   layouts/Layout.astro          <head>, SEO / Open Graph, fonts
   pages/index.astro             the page
   components/
-    ConstructionScene.astro     animated SVG site: crane, neon sign, welder, red carpet, flashes
+    ConstructionScene.astro     animated SVG site: crane, neon sign, welder
     Starfield.astro             canvas starfield + shooting stars
     Countdown.astro             split-flap launch countdown (shown first)
     CodingWorker.astro          worker on the countdown: codes, sips coffee, walks; tap to shake

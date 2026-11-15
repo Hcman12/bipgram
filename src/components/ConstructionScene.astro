@@ -68,15 +68,6 @@ const sparks = Array.from({ length: 9 }, (_, i) => ({
   delay: (i * 0.11).toFixed(2),
 }));
 
-const flashes = [
-  { x: 150, y: 408, d: 0.4 },
-  { x: 352, y: 418, d: 2.1 },
-  { x: 118, y: 432, d: 3.3 },
-  { x: 384, y: 400, d: 1.2 },
-  { x: 178, y: 428, d: 4.4 },
-  { x: 330, y: 434, d: 2.9 },
-];
-
 const stars = Array.from({ length: 26 }, () => ({
   x: Math.round(rand() * 600),
   y: Math.round(rand() * 200),
@@ -85,7 +76,7 @@ const stars = Array.from({ length: 26 }, () => ({
 }));
 ---
 
-<figure class="scene" aria-label="Animated illustration: a tower crane lifts a steel beam onto the Bipgram building while a red carpet is rolled out">
+<figure class="scene" aria-label="Animated illustration: a tower crane lifts a steel beam onto the Bipgram building">
   <div class="cam-ui" aria-hidden="true">
     <span class="rec"><i></i> LIVE · SITE CAM 01</span>
     <span class="clock" data-cam-clock>--:--:--</span>
@@ -107,12 +98,6 @@ const stars = Array.from({ length: 26 }, () => ({
     <!-- Stars -->
     <g class="stars">
       {stars.map((s) => <circle cx={s.x} cy={s.y} r={s.r} style={`animation-delay:${s.delay}s`} />)}
-    </g>
-
-    <!-- Premiere spotlights -->
-    <g class="spots">
-      <g transform="translate(70 440)"><polygon class="spot spot-a" points="0,0 -60,-520 60,-520" /></g>
-      <g transform="translate(530 440)"><polygon class="spot spot-b" points="0,0 -60,-520 60,-520" /></g>
     </g>
 
     <!-- Distant skyline -->
@@ -250,30 +235,6 @@ const stars = Array.from({ length: 26 }, () => ({
       </g>
     </g>
 
-    <!-- ===== Red carpet & premiere details ===== -->
-    <g class="carpet-wrap">
-      <polygon class="carpet" points="234,380 266,380 304,440 196,440" fill="#b3123f" />
-    </g>
-    <g class="stanchions">
-      <path d="M224 392 Q219 404 213 412 M213 412 Q207 425 201 432 M276 392 Q281 404 287 412 M287 412 Q293 425 299 432" fill="none" stroke="#b3123f" stroke-width="2" stroke-linecap="round" />
-      {
-        [
-          [224, 392],
-          [213, 412],
-          [201, 432],
-          [276, 392],
-          [287, 412],
-          [299, 432],
-        ].map(([x, y]) => (
-          <g>
-            <rect x={x - 1} y={y - 12} width="2" height="12" fill="#ffd36a" />
-            <circle cx={x} cy={y - 12.5} r="2" fill="#ffe29a" />
-            <ellipse cx={x} cy={y} rx="3.4" ry="1.2" fill="#ffd36a" />
-          </g>
-        ))
-      }
-    </g>
-
     <!-- Barricade + cones -->
     <g class="barricade">
       <path d="M58 380 L66 352 M112 380 L104 352" stroke="#d9dcef" stroke-width="2.4" />
@@ -294,11 +255,6 @@ const stars = Array.from({ length: 26 }, () => ({
         </g>
       ))
     }
-
-    <!-- Paparazzi flashes -->
-    <g class="flashes">
-      {flashes.map((f) => <circle cx={f.x} cy={f.y} r="5" fill="#ffffff" style={`animation-delay:${f.d}s`} />)}
-    </g>
   </svg>
 
   <figcaption class="sr-only">Bipgram is under construction.</figcaption>
@@ -373,16 +329,6 @@ const stars = Array.from({ length: 26 }, () => ({
   .stars circle {
     fill: #fff;
     animation: twinkle 4s ease-in-out infinite;
-  }
-  .spot {
-    fill: #fff8e6;
-    opacity: 0.05;
-    mix-blend-mode: screen;
-    animation: sweep 9s ease-in-out infinite alternate;
-  }
-  .spot-b {
-    animation-duration: 11s;
-    animation-direction: alternate-reverse;
   }
   .skyline rect {
     fill: #17123a;
@@ -492,17 +438,6 @@ const stars = Array.from({ length: 26 }, () => ({
   .placed-beam { animation-name: placed; animation-timing-function: linear; }
   .pile-top { animation-name: pileTop; animation-timing-function: linear; }
 
-  /* --- Red carpet --- */
-  .carpet {
-    transform-origin: 250px 380px;
-    animation: rollOut 1.6s 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-  .flashes circle {
-    opacity: 0;
-    filter: drop-shadow(0 0 6px #fff);
-    animation: flash 5.2s linear infinite;
-  }
-
   /* ================= Keyframes ================= */
   @keyframes trolley {
     0%, 34% { transform: translateX(396px); }
@@ -584,10 +519,6 @@ const stars = Array.from({ length: 26 }, () => ({
     0%, 100% { opacity: 0.25; filter: none; }
     50% { opacity: 1; filter: drop-shadow(0 0 4px #ff3b5c); }
   }
-  @keyframes sweep {
-    from { transform: rotate(-22deg); }
-    to { transform: rotate(18deg); }
-  }
   @keyframes twinkle {
     0%, 100% { opacity: 0.25; }
     50% { opacity: 1; }
@@ -597,22 +528,7 @@ const stars = Array.from({ length: 26 }, () => ({
     40% { opacity: 0.8; }
     60% { opacity: 0.35; }
   }
-  @keyframes rollOut {
-    from { transform: scaleY(0); }
-    to { transform: scaleY(1); }
-  }
-  @keyframes flash {
-    0%, 92% { opacity: 0; transform: scale(0.6); }
-    93% { opacity: 1; transform: scale(1.2); }
-    97% { opacity: 0; transform: scale(1); }
-    100% { opacity: 0; }
-  }
   @keyframes blink {
     to { visibility: hidden; }
-  }
-
-  .flashes circle {
-    transform-box: fill-box;
-    transform-origin: center;
   }
 </style>
